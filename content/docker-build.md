@@ -1,23 +1,28 @@
-Title: Building a Blog in a Box
+Title: Containerising the blog
 Date: 2016-03-30 12:17
-Category: Docker
+Category: Tech-Notes
+Tags: docker, pelican
 
-This post notes some of the steps taken  to  create a static site based blog and deploying it
-using docker. There are a number of moving parts which are each 
-pretty straightforward. 
+This post notes some of the steps taken to create a static site based blog and
+containerising it.  Future posts will deal with numerous ways we can "deploy"
+it; using docker, docker-machine and perhaps even CoreOS. 
 
 I chose to use the [pelican](http://blog.getpelican.com/) static site
-generator. As a lover of markdown and vim, pelican's support for plain text
-markup based content seems to fit how I like to take notes and write.
+generator. As a lover of markdown and vim; pelican's support for plain text
+markup based content fits how I like to write.
 
 A static site generator takes a bunch of content and spits out a series of
-html pages. These pages are what we'll "serve" using a webserver.
+nicely styled html pages. These pages are what we'll "serve" using a
+webserver. I'm not going to focus on the mechanics of the blog per-se but did
+find the [quickstart](http://docs.getpelican.com/en/3.6.3/quickstart.html) as well as 
+[notionsandnotes](http://www.notionsandnotes.org/tech/web-development/pelican-static-blog-setup.html#moving-to-pelican-bootstrap3-theme-and-other-improvements)
+useful for understanding  what to modify  to  style the blog.
 
 The webserver and associated content are what we're going to package together
 and run inside of a Docker container. 
 
-We'll then deploy this container inside of a Digital Ocean so-called droplet (
-their name for a Virtual Machine)
+We'll then deploy this container inside of a Digital Ocean so-called droplet
+(their name for a Virtual Machine)
 
 This first post will describe creating a container containing everything
 needed to run the blog.  Future posts will cover the process of "deploying" to
@@ -50,7 +55,7 @@ The docker image command takes a Dockerfile as an input and uses the
 instructions contained within to build an image, a "template" which will be
 used for future container creation/instantiation.
 
-### Dockerfile commands : Some basics which are in every dockerfile
+### Dockerfile commands : Some common  commands 
 
 - FROM: Which base image to base this image on. Found in every Dockerfile
 - RUN: Instructions for what to run inside of the docker file during the
@@ -78,8 +83,10 @@ stuff. That's where simple and concrete examples help to cement things.
 
 The **FROM** command illustrates some of the beauty and ease of the docker ecosystem, the fact
 that we can use a preconfigured container **nginx** and then adapt it makes
-life really simple. nginx is sufficiently qualified and unique, it refers to
-the docker image [nginx](https://hub.docker.com/_/nginx/). If we wanted to or
+life really simple. We could use a more fully qualified image name containing
+the registry location username and tag, however
+docker defaults to the library image on the public docker hub registry.  
+If we wanted to or
 did not trust this image we could of course start with a say a default ubuntu
 image and then install nginx inside of this image. 
 
@@ -147,7 +154,7 @@ longer and more detailed post on the nature of docker networking.
 	ec081fb4193b        robsblogimage       "nginx -g 'daemon off"   4 seconds ago       Up 4 seconds        0.0.0.0:80->80/tcp, 443/tcp   robsblog
 	t
 
-### Locally curl the blog 
+### Locally curl the blog  as a quick test
 
     :::bash
 	test-lt :: ~ » curl localhost | head
@@ -164,4 +171,13 @@ longer and more detailed post on the nature of docker networking.
 	... snip
 
 We can also use a browser and see the blog at the address "localhost"
+
+### Keeping it clean: Easy rebuilding
+It's very easy to get into a mess of leftover images and containers. The
+pelican code includes a handy fabric file to aid in rebuilding and deploying
+the blog. I added a
+new  docker_rebuild target to the fabfile to allow for easy cleanup and rebuilding of the
+docker image file
+
+## Next
 The next post will cover deploying this container to digital ocean.

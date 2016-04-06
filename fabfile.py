@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import SocketServer
+import subprocess
 
 from pelican.server import ComplexHTTPRequestHandler
 
@@ -22,6 +23,10 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 
 # Github Pages configuration
 env.github_pages_branch = "gh-pages"
+
+# Docker configuration
+env.docker_image = "robsblogimage"
+env.docker_container_name = "robsblog"
 
 # Port for `serve`
 PORT = 8000
@@ -65,6 +70,29 @@ def reserve():
 def preview():
     """Build production version of site"""
     local('pelican -s publishconf.py')
+
+
+def docker_rebuild():
+    """`Rebuild the  blog and docker image : Kills  and restarts the container`"""
+    clean()
+    build()
+
+    # resorting to subprocess call since using the fabric.local command result
+    # in insane amounts of escaping to get the {{ }} passed to the docker inspect
+    # command
+    result = subprocess.check_output("docker inspect -f {{.State.Running}} %s" % env.docker_container_name, shell=True)
+    print "result = %s" % result
+    if result .strip()== "true":
+            local("docker kill  {docker_container_name}".format(**env))
+    result = subprocess.check_output("docker inspect -f {{.State.Status}} %s" % env.docker_container_name, shell=True)
+    print result
+    if result.strip() == "exited":
+            local("docker rm  {docker_container_name}".format(**env))
+    local("docker rmi  {docker_image}".format(**env))
+    local("docker build -t {docker_image} .".format(**env))
+    local("docker run -d -p 80:80 --name {docker_container_name} {docker_image} ".format(**env))
+
+
 
 def cf_upload():
     """Publish to Rackspace Cloud Files"""
