@@ -73,22 +73,26 @@ def preview():
 
 
 def docker_rebuild():
-    """`Rebuild the  blog and docker image : Kills  and restarts the container`"""
+    """`Rebuild the  blog  for production along with  docker image : Kills  and restarts the container`"""
     clean()
-    build()
+    preview() # Builds the production version of the blog
+    #build()
 
-    # resorting to subprocess call since using the fabric.local command result
-    # in insane amounts of escaping to get the {{ }} passed to the docker inspect
-    # command
-    result = subprocess.check_output("docker inspect -f {{.State.Running}} %s" % env.docker_container_name, shell=True)
-    print "result = %s" % result
-    if result .strip()== "true":
+    # resorting to subprocess module calls since using the fabric.local command result
+    # in insane amounts of escaping to get the {{ }} passed to the docker inspect  command
+    # A number of steps are taken to avoid cruft(tm) building up on the docker  host
+        # Check if there's an existing container running; if so kill it
+        # Remove any existing container image, if it exists
+        # Remove the existing docker image
+    if subprocess.check_output("docker ps -a | grep %s; exit 0" % env.docker_container_name, shell=True) != "" :
+        result = subprocess.check_output("docker inspect -f {{.State.Running}} %s" % env.docker_container_name, shell=True)
+        if result .strip()== "true":
             local("docker kill  {docker_container_name}".format(**env))
-    result = subprocess.check_output("docker inspect -f {{.State.Status}} %s" % env.docker_container_name, shell=True)
-    print result
-    if result.strip() == "exited":
+        result = subprocess.check_output("docker inspect -f {{.State.Status}} %s ; exit 0" % env.docker_container_name, shell=True)
+        if result.strip() == "exited":
             local("docker rm  {docker_container_name}".format(**env))
-    local("docker rmi  {docker_image}".format(**env))
+    if subprocess.check_output("docker images | grep %s; exit 0" % env.docker_image, shell=True) != "" :
+        local("docker rmi  {docker_image}".format(**env))
     local("docker build -t {docker_image} .".format(**env))
     local("docker run -d -p 80:80 --name {docker_container_name} {docker_image} ".format(**env))
 

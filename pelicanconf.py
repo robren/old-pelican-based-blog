@@ -3,8 +3,9 @@
 from __future__ import unicode_literals
 
 AUTHOR = u'Rob Rennison'
-SITENAME = u'Pelican Blog Experiment'
-SITEURL = ''
+SITENAME = u'Fun With Containers'
+SITEURL = 'http://www.robren.net'
+#SITEURL = ''
 THEME = '../pelican-themes/pelican-bootstrap3/'
 BOOTSTRAP_THEME = 'readable'
 PATH = 'content'
@@ -33,8 +34,7 @@ AUTHOR_FEED_RSS = None
 # Blogroll
 LINKS = (('Pelican', 'http://getpelican.com/'),
          ('Python.org', 'http://python.org/'),
-         ('Jinja2', 'http://jinja.pocoo.org/'),
-         ('You can modify those links in your config file', '#'),)
+         )
 
 # Social widget
 SOCIAL = (('Github', 'https://github.com/robren'),
