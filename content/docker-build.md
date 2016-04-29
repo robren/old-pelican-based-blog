@@ -64,6 +64,15 @@ Notice the Dockerfile, the only thing non-traditional about this pelican blog.
 
     5 directories, 8 files
 
+Generating the output is as simple as calling make.
+
+    test-lt :: Dropbox/Blog/robren-blog » make publish
+    pelican /media/d/Users/rob/Dropbox/Blog/robren-blog/content -o
+    /media/d/Users/rob/Dropbox/Blog/robren-blog/output -s
+    /media/d/Users/rob/Dropbox/Blog/robren-blog/publishconf.py
+    Done: Processed 2 articles, 0 drafts, 0 pages and 0 hidden pages in 0.48
+    seconds.
+
 # Creating the  Docker Image
 
 We're going to bundle the web server along with associated content into
@@ -162,25 +171,56 @@ longer and more detailed post on the nature of docker networking.
 The [docker build](https://docs.docker.com/v1.8/reference/commandline/build/)
 command is used, this defaults to using the Dockerfile within the 
 directory specified as the final parameter ( note the . at the end of the
-command). For fun I timed this, its pretty snappy!
+command). For fun I timed this, here we can see elapsed time around 27 seconds. 
 
     :::bash
-	test-lt :: Dropbox/Blog/robren-blog » time docker build -t robsblogimage .
-	Sending build context to Docker daemon  4.38 MB
-	Step 1 : FROM nginx
-	latest: Pulling from library/nginx
-	efd26ecc9548: Already exists
-	a3ed95caeb02: Pull complete
-	a48df1751a97: Pull complete
-	8ddc2d7beb91: Pull complete
-	Digest: sha256:2ca2638e55319b7bc0c7d028209ea69b1368e95b01383e66dfe7e4f43780926d
-	Status: Downloaded newer image for nginx:latest
-	---> 6f8d099c3adc
-	Step 2 : COPY output /usr/share/nginx/html
-	---> 169b27ba0e93
-	Removing intermediate container d7408e5e7dea
-	Successfully built 169b27ba0e93
-	docker build -t robsblogimage .  0.06s user 0.02s system 0% cpu 17.212 total
+    test-lt :: Dropbox/Blog/robren-blog » time docker build -t robsblogimage .
+    Sending build context to Docker daemon 4.402 MB
+    Step 1 : FROM nginx
+    latest: Pulling from library/nginx
+
+    efd26ecc9548: Already exists
+    a3ed95caeb02: Pull complete
+    a48df1751a97: Pull complete
+    8ddc2d7beb91: Pull complete
+    Digest:
+    sha256:2ca2638e55319b7bc0c7d028209ea69b1368e95b01383e66dfe7e4f43780926d
+    Status: Downloaded newer image for nginx:latest
+    ---> 6f8d099c3adc
+    Step 2 : COPY output /usr/share/nginx/html
+    ---> b8c526df4e91
+    Removing intermediate container 2ad386384ad8
+    Successfully built b8c526df4e91
+    docker build -t robsblogimage .  0.05s user 0.03s system 0% cpu 27.601 total
+
+Note how the above build included pulling in the nginx image; if we make a
+change to the blog and rebuild we'll observe that the nginx image has been
+cached. Notice in the re-run shown below that  Step 1 merely pulls in a cached
+image, total time is about 0.3  seconds!
+
+    test-lt :: Dropbox/Blog/robren-blog » make publish
+    pelican /media/d/Users/rob/Dropbox/Blog/robren-blog/content -o
+    /media/d/Users/rob/Dropbox/Blog/robren-blog/output -s
+    /media/d/Users/rob/Dropbox/Blog/robren-blog/publishconf.py
+    Done: Processed 2 articles, 0 drafts, 0 pages and 0 hidden pages in 0.48
+    seconds.
+    test-lt :: Dropbox/Blog/robren-blog » time docker build -t robsblogimage .
+    Sending build context to Docker daemon 4.404 MB
+    Step 1 : FROM nginx
+    ---> 6f8d099c3adc
+    Step 2 : COPY output /usr/share/nginx/html
+    ---> 83227d8d9c97
+    Removing intermediate container cd68ae2a7642
+    Successfully built 83227d8d9c97
+    docker build -t robsblogimage .  0.04s user 0.01s system 16% cpu 0.308 total
+
+We can see what images exist on our host with the *docker images* command
+
+    test-lt :: Dropbox/Blog/robren-blog » docker images
+    REPOSITORY                      TAG                 IMAGE ID CREATED             SIZE
+    robsblogimage                   latest              83227d8d9c97        7 minutes ago       186.8 MB
+    nginx                           latest              6f8d099c3adc        23 hours ago        182.7 MB
+
 
 ### Run a container based on the image
 
@@ -220,7 +260,7 @@ pelican code includes a handy fabric file to aid in rebuilding and deploying
 the blog to github, to  rackspace etc. I added a
 new  docker_rebuild target to the fabfile to allow for easy cleanup and rebuilding of the
 docker image file. The complete blog along with the modified fabfile.py can be
-found at my [robren-blog](https://github.com/robren/robren-blog)
+found at my [github robren/robren-blog](https://github.com/robren/robren-blog)
 
 ## Next
 The next post will cover deploying this container to digital ocean.
