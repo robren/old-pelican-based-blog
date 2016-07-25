@@ -4,7 +4,6 @@ import os
 import shutil
 import sys
 import SocketServer
-import subprocess
 
 from pelican.server import ComplexHTTPRequestHandler
 
@@ -25,8 +24,9 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 env.github_pages_branch = "gh-pages"
 
 # Docker configuration
-env.docker_image = "robsblogimage"
-env.docker_container_name = "robsblog"
+env.docker_base_image = 'nginx'
+env.docker_target_dir = '/usr/share/nginx/html'
+env.docker_container_name = 'pelican_site_container'
 
 # Port for `serve`
 PORT = 8000
@@ -71,33 +71,6 @@ def preview():
     """Build production version of site"""
     local('pelican -s publishconf.py')
 
-
-def docker_rebuild():
-    """`Rebuild the  blog  for production along with  docker image : Kills  and restarts the container`"""
-    clean()
-    preview() # Builds the production version of the blog
-    #build()
-
-    # resorting to subprocess module calls since using the fabric.local command result
-    # in insane amounts of escaping to get the {{ }} passed to the docker inspect  command
-    # A number of steps are taken to avoid cruft(tm) building up on the docker  host
-        # Check if there's an existing container running; if so kill it
-        # Remove any existing container image, if it exists
-        # Remove the existing docker image
-    if subprocess.check_output("docker ps -a | grep %s; exit 0" % env.docker_container_name, shell=True) != "" :
-        result = subprocess.check_output("docker inspect -f {{.State.Running}} %s" % env.docker_container_name, shell=True)
-        if result .strip()== "true":
-            local("docker kill  {docker_container_name}".format(**env))
-        result = subprocess.check_output("docker inspect -f {{.State.Status}} %s ; exit 0" % env.docker_container_name, shell=True)
-        if result.strip() == "exited":
-            local("docker rm  {docker_container_name}".format(**env))
-    if subprocess.check_output("docker images | grep %s; exit 0" % env.docker_image, shell=True) != "" :
-        local("docker rmi  {docker_image}".format(**env))
-    local("docker build -t {docker_image} .".format(**env))
-    local("docker run -d -p 80:80 --name {docker_container_name} {docker_image} ".format(**env))
-
-
-
 def cf_upload():
     """Publish to Rackspace Cloud Files"""
     rebuild()
@@ -122,5 +95,35 @@ def publish():
 def gh_pages():
     """Publish to GitHub Pages"""
     rebuild()
-    local("ghp-import -b {github_pages_branch} {deploy_path}".format(**env))
-    local("git push origin {github_pages_branch}".format(**env))
+    local("ghp-import -b {github_pages_branch} {deploy_path} -p".format(**env))
+
+def docker_rebuild():
+    """Rebuild the pelican site for production and install in a docker image :
+       - Kill and remove any existing pelican_site container.
+       - Mount our site into the webserver container and run it.
+
+    """
+    clean()
+    preview()  # Builds the production version of the site
+
+    if local("docker ps -a | grep %s; exit 0" %
+             env.docker_container_name, capture=True) != "":
+        local("docker rm -f  {docker_container_name}".format(**env))
+
+
+# Now we are running sans docker file no image
+    if local("docker images | grep %s; exit 0" %
+            env.docker_base_image, capture=True) != "" :
+        local("docker rmi  {docker_base_image}".format(**env))
+        
+# Now build and run the new image
+    local("docker build -t {docker_base_image} .".format(**env))
+
+    local("docker run -d -p 80:80 --name {docker_container_name} \
+            {docker_base_image} ".format(**env))
+
+    # Now run the base image and map our site inside the container.
+#    abs_site_dir = os.path.abspath('output')
+#    local("docker run -d -p 80:80 -v {0}:{docker_target_dir} \
+#            --name {docker_container_name} {docker_base_image} \
+#            ".format(abs_site_dir, **env))
