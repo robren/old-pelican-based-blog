@@ -1,5 +1,5 @@
 Title: Deploying the blog
-Date: 2016-04-28 21:00
+Date: 2016-06-12 21:00
 Category: Tech-Notes
 Tags: docker,docker-machine, pelican
 

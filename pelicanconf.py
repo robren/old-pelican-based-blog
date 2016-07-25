@@ -6,7 +6,7 @@ AUTHOR = u'Rob Rennison'
 SITENAME = u'Fun With Containers'
 SITEURL = 'http://www.robren.net'
 #SITEURL = ''
-THEME = '../pelican-themes/pelican-bootstrap3/'
+THEME = './pelican-themes/pelican-bootstrap3/'
 BOOTSTRAP_THEME = 'readable'
 PATH = 'content'
 
