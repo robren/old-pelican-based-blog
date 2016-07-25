@@ -1,5 +1,5 @@
 Title: Containerising A Blog
-Date: 2016-04-28 12:20
+Date: 2016-04-29 12:20
 Category: Tech-Notes
 Tags: docker, pelican
 

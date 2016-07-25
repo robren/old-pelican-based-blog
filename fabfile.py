@@ -24,7 +24,7 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 env.github_pages_branch = "gh-pages"
 
 # Docker configuration
-env.docker_base_image = 'nginx'
+env.docker_blog_image = 'nginx-blog'
 env.docker_target_dir = '/usr/share/nginx/html'
 env.docker_container_name = 'pelican_site_container'
 
@@ -111,19 +111,19 @@ def docker_rebuild():
         local("docker rm -f  {docker_container_name}".format(**env))
 
 
-# Now we are running sans docker file no image
+# Remove the existing blog docker image
     if local("docker images | grep %s; exit 0" %
-            env.docker_base_image, capture=True) != "" :
-        local("docker rmi  {docker_base_image}".format(**env))
+            env.docker_blog_image, capture=True) != "" :
+        local("docker rmi  {docker_blog_image}".format(**env))
         
 # Now build and run the new image
-    local("docker build -t {docker_base_image} .".format(**env))
+    local("docker build -t {docker_blog_image} .".format(**env))
 
     local("docker run -d -p 80:80 --name {docker_container_name} \
-            {docker_base_image} ".format(**env))
+            {docker_blog_image} ".format(**env))
 
     # Now run the base image and map our site inside the container.
 #    abs_site_dir = os.path.abspath('output')
 #    local("docker run -d -p 80:80 -v {0}:{docker_target_dir} \
-#            --name {docker_container_name} {docker_base_image} \
+#            --name {docker_container_name} {docker_blog_image} \
 #            ".format(abs_site_dir, **env))
