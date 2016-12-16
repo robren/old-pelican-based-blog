@@ -43,25 +43,29 @@ To recreate this blog, there's **no need** to run the pelican-quickstart.
 The following steps should be performed preferably in a virtualenv.
 
 - Install pelican 
-    :::bash
+```shell
     sudo pelican pip install pelican
+```
 
 - Alternatively
     - If deploying the blog in a docker container is desirable, the pip
     installation must be pointed at my fork. It's currently under-review as of Dec 2016 
 
-        :::bash
-        sudo pip install -U git+https://github.com/robren/pelican@docker-nginx-deploy
+```shell
+    sudo pip install -U git+https://github.com/robren/pelican@docker-nginx-deploy
+```
 
 - Clone the pelican themes repo alongside the  blog directory
   - Or wherever you want, just set the THEME = 'path-to-theme' in pelicanconf.py
 
-    :::bash
+```shell
     git clone  https://github.com/getpelican/pelican-themes 
+```
 
 - Clone the robren-blog
-    :::bash
+```shell
     git clone https://github.com/robren/robren-blog
+```
 
 - Now you can run the pelican command to generate the blog, or the fab command
   or ... the make commands.
@@ -70,13 +74,15 @@ The following steps should be performed preferably in a virtualenv.
 
 - The version of pelican can be updated using
 
-    :::bash
+```shell
     pip install -U pelican
+```
 
 - The themes updated by performing a git pull in the pelican-themse directory
 
 - The blog updated by adding new content and "publishing it" using on of the "fabric" commands
 
+```shell
 	test-lt :: ~/Blog/robren-blog » fab -l
 	Available commands:
 
@@ -92,6 +98,7 @@ The following steps should be performed preferably in a virtualenv.
 		regenerate                 Automatically regenerate site upon file modification
 		reserve                    `build`, then `serve`
 		serve                      Serve site at http://localhost:8000/
+```
 
 
 
