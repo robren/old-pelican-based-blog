@@ -1,5 +1,5 @@
-Title: Containerising A Blog
-Date: 2016-04-29 12:20
+Title: Containerising A Pelican Blog
+Date: 2016-12-10 12:20
 Category: Tech-Notes
 Tags: docker, pelican
 
@@ -131,22 +131,20 @@ stuff. That's where simple and concrete examples such as this trivial
 
     :::bash
     test-lt :: rob/Dropbox/Blog » more Dockerfile
-    FROM nginx
-    COPY robren-blog/output /usr/share/nginx/html
-    EXPOSE 80
+    FROM nginx:alpine
+    COPY output /usr/share/nginx/html
 
 The **FROM** command illustrates some of the beauty and ease of the docker
 ecosystem.  The FROM command  specifies a base image to start with for our
-custom image. The fact that we can use a preconfigured container **nginx** and
-then adapt it makes life really simple. These base images, if public, live on
+custom image. The fact that we can use a preconfigured container
+**nginx:alpine** and then adapt it makes life really simple. These base images, if public, live on
 the [docker hub](https://hub.docker.com/explore/) and are copied to a local
 cache. There are caveats about using a more fully qualified image name containing the
 registry location username and tag for 'production".  
 
-For our purposes and with over 10 Million downloads I'm sure this nginx
-container is pretty "golden". It's also designated as an offical image so
+This nginx:alpine image is an designated an 'offical' image so
 there's some sense that its been tested. In other ecosystems with a hub or
-repo of sample images/scripts, we don's always get this warm fuzzy.
+repo of sample images/scripts, we don't always get this warm fuzzy.
 Ansible-galaxy comes to mind, there's often a large swath of half-baked examples and images
 leaving one to frustratingly experiment or give up and create ones own.
 
@@ -162,64 +160,59 @@ default place within the docker image where nginx expects to server html content
 	FROM nginx
 	COPY output /usr/share/nginx/html
 	
-The **EXPOSE** command instructs docker to expose the container's  port 80 as
-port 80 on the host which is running the container. This is a subject for a
-longer and more detailed post on the nature of docker networking.
-
 ## Build the image
 
 The [docker build](https://docs.docker.com/v1.8/reference/commandline/build/)
 command is used, this defaults to using the Dockerfile within the 
-directory specified as the final parameter ( note the . at the end of the
-command). For fun I timed this, here we can see elapsed time around 27 seconds. 
+directory specified as the final parameter (note the . at the end of the
+command). For fun I timed this, here we can see elapsed time around 12 seconds. 
 
     :::bash
-    test-lt :: Dropbox/Blog/robren-blog » time docker build -t robsblogimage .
-    Sending build context to Docker daemon 4.402 MB
-    Step 1 : FROM nginx
-    latest: Pulling from library/nginx
+	test-lt :: ~/Blog/robren-blog » time docker build -t robsblogimage .
+	Sending build context to Docker daemon 24.04 MB
+	Step 1 : FROM nginx:alpine
+	alpine: Pulling from library/nginx
+	3690ec4760f9: Pull complete
+	f8fdeb23f7ad: Pull complete
+	1ba450842ec7: Pull complete
+	3886e6ddf80b: Pull complete
+	Digest: sha256:aee97412fee873bd3d8fc2331b80862d7bd58913f7b12740cae8515edc1a66e4
+	Status: Downloaded newer image for nginx:alpine
+	---> d964ab5d0abe
+	Step 2 : COPY output /usr/share/nginx/html
+	---> ee4663ba81e5
+	Removing intermediate container 116ed21e235c
+	Successfully built ee4663ba81e5
+	docker build -t robsblogimage .  0.10s user 0.04s system 1% cpu 12.035 total
 
-    efd26ecc9548: Already exists
-    a3ed95caeb02: Pull complete
-    a48df1751a97: Pull complete
-    8ddc2d7beb91: Pull complete
-    Digest:
-    sha256:2ca2638e55319b7bc0c7d028209ea69b1368e95b01383e66dfe7e4f43780926d
-    Status: Downloaded newer image for nginx:latest
-    ---> 6f8d099c3adc
-    Step 2 : COPY output /usr/share/nginx/html
-    ---> b8c526df4e91
-    Removing intermediate container 2ad386384ad8
-    Successfully built b8c526df4e91
-    docker build -t robsblogimage .  0.05s user 0.03s system 0% cpu 27.601 total
-
-Note how the above build included pulling in the nginx image; if we make a
+Note how the above build included pulling in the nginx:alpine image; if we make a
 change to the blog and rebuild we'll observe that the nginx image has been
 cached. Notice in the re-run shown below that  Step 1 merely pulls in a cached
-image, total time is about 0.3  seconds!
+image, total time is about 0.6  seconds!
 
-    test-lt :: Dropbox/Blog/robren-blog » make publish
-    pelican /media/d/Users/rob/Dropbox/Blog/robren-blog/content -o
-    /media/d/Users/rob/Dropbox/Blog/robren-blog/output -s
-    /media/d/Users/rob/Dropbox/Blog/robren-blog/publishconf.py
-    Done: Processed 2 articles, 0 drafts, 0 pages and 0 hidden pages in 0.48
-    seconds.
-    test-lt :: Dropbox/Blog/robren-blog » time docker build -t robsblogimage .
-    Sending build context to Docker daemon 4.404 MB
-    Step 1 : FROM nginx
-    ---> 6f8d099c3adc
-    Step 2 : COPY output /usr/share/nginx/html
-    ---> 83227d8d9c97
-    Removing intermediate container cd68ae2a7642
-    Successfully built 83227d8d9c97
-    docker build -t robsblogimage .  0.04s user 0.01s system 16% cpu 0.308 total
+	:::bash
+	test-lt :: ~/Blog/robren-blog 2 » make publish
+	pelican /home/test/Blog/robren-blog/content -o /home/test/Blog/robren-blog/output -s /home/test/Blog/robren-blog/publishconf.py
+	Done: Processed 2 articles, 0 drafts, 0 pages and 0 hidden pages in 0.39 seconds.
+
+	test-lt :: ~/Blog/robren-blog » time docker build -t robsblogimage .
+	Sending build context to Docker daemon 24.04 MB
+	Step 1 : FROM nginx:alpine
+	---> d964ab5d0abe
+	Step 2 : COPY output /usr/share/nginx/html
+	---> 56d114c05511
+	Removing intermediate container 959d4d439356
+	Successfully built 56d114c05511
+	docker build -t robsblogimage .  0.07s user 0.03s system 16% cpu 0.597 total
 
 We can see what images exist on our host with the *docker images* command
 
-    test-lt :: Dropbox/Blog/robren-blog » docker images
-    REPOSITORY                      TAG                 IMAGE ID CREATED             SIZE
-    robsblogimage                   latest              83227d8d9c97        7 minutes ago       186.8 MB
-    nginx                           latest              6f8d099c3adc        23 hours ago        182.7 MB
+	:::bash
+	test-lt :: ~/Blog/robren-blog » docker images
+	REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+	robsblogimage       latest              56d114c05511        3 minutes ago       59.02 MB
+	<none>              <none>              ee4663ba81e5        10 minutes ago      59.02 MB
+	nginx               alpine              d964ab5d0abe        2 weeks ago         54.89 MB
 
 
 ### Run a container based on the image
@@ -229,12 +222,14 @@ Now that we have our "bespoke" image we can run it using the ... *docker run* co
 - The -d flag specifies that we run the container in the background (as a daemon) 
 - The -p 80:80 tells docker to expose port 80 inside the container as port 80 on our host.
 
-		:::bash
-		test-lt :: Dropbox/Blog/robren-blog » docker run --name robsblog -d -p 80:80 robsblogimage
-		ec081fb4193b9630ab1e358ef581e97af27fba6f3396dd71f0f8c987fa2e266c
-		test-lt :: Dropbox/Blog/robren-blog » docker ps
-		CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                         NAMES
-		ec081fb4193b        robsblogimage       "nginx -g 'daemon off"   4 seconds ago       Up 4 seconds        0.0.0.0:80->80/tcp, 443/tcp   robsblog
+	:::bash
+	test-lt :: ~/Blog/robren-blog » docker run --name robsblog -d -p 80:80 robsblogimage
+
+	6e98ac06cf307d211eb0c5cf8da726543e0a120aab7b646004760e9698ce705d
+	test-lt :: ~/Blog/robren-blog » docker ps
+	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                         NAMES
+	6e98ac06cf30        robsblogimage       "nginx -g 'daemon off"   17 seconds ago      Up 17 seconds       0.0.0.0:80->80/tcp, 443/tcp   robsblog
+
 
 ### Locally curl the blog  as a quick test
 

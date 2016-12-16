@@ -3,14 +3,16 @@
 from __future__ import unicode_literals
 
 AUTHOR = u'Rob Rennison'
-SITENAME = u'Fun With Containers'
+SITENAME = u"Rob Rennison's Blog"
 SITEURL = 'http://www.robren.net'
 #SITEURL = ''
 THEME = '../pelican-themes/pelican-bootstrap3/'
+
 # Found out the hard way that this poorly documented step is 
 # required to make some of the themes, including bootstrap3 work
 JINJA_EXTENSIONS = ['jinja2.ext.i18n']
 
+PYGMENTS_STYLE = 'solarizedlight'
 BOOTSTRAP_THEME = 'readable'
 PATH = 'content'
 
