@@ -6,7 +6,11 @@ AUTHOR = u'Rob Rennison'
 SITENAME = u'Fun With Containers'
 SITEURL = 'http://www.robren.net'
 #SITEURL = ''
-THEME = './pelican-themes/pelican-bootstrap3/'
+THEME = '../pelican-themes/pelican-bootstrap3/'
+# Found out the hard way that this poorly documented step is 
+# required to make some of the themes, including bootstrap3 work
+JINJA_EXTENSIONS = ['jinja2.ext.i18n']
+
 BOOTSTRAP_THEME = 'readable'
 PATH = 'content'
 

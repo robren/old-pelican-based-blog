@@ -1,14 +1,6 @@
 body {
      text-rendering: optimizelegibility;
 }
-p {
-    font-family: Impact, Charcoal, sans-serif;
-    font-size: 16px
-}
-li {
-    font-family: Impact, Charcoal, sans-serif;
-    font-size: 16px
-}
 
 a {
   color: #2060A0;

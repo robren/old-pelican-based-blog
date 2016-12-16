@@ -24,7 +24,7 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 env.github_pages_branch = "gh-pages"
 
 # Docker configuration
-env.docker_blog_image = 'nginx-blog'
+env.docker_blog_image = 'alpine-blog'
 env.docker_target_dir = '/usr/share/nginx/html'
 env.docker_container_name = 'pelican_site_container'
 
@@ -100,8 +100,9 @@ def gh_pages():
 def docker_rebuild():
     """Rebuild the pelican site for production and install in a docker image :
        - Kill and remove any existing pelican_site container.
-       - Mount our site into the webserver container and run it.
-
+       - Copy the site into the webserver base image, build a new pelican_site
+         container.
+       - Run our new container.
     """
     clean()
     preview()  # Builds the production version of the site
@@ -121,9 +122,3 @@ def docker_rebuild():
 
     local("docker run -d -p 80:80 --name {docker_container_name} \
             {docker_blog_image} ".format(**env))
-
-    # Now run the base image and map our site inside the container.
-#    abs_site_dir = os.path.abspath('output')
-#    local("docker run -d -p 80:80 -v {0}:{docker_target_dir} \
-#            --name {docker_container_name} {docker_blog_image} \
-#            ".format(abs_site_dir, **env))
