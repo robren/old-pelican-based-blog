@@ -24,7 +24,8 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 env.github_pages_branch = "gh-pages"
 
 # Docker configuration
-env.docker_blog_image = 'alpine-blog'
+#env.docker_blog_image = 'alpine-blog'
+env.docker_blog_image = 'gcr.io/robren-blog-v1/alpine-blog:latest' 
 env.docker_target_dir = '/usr/share/nginx/html'
 env.docker_container_name = 'pelican_site_container'
 

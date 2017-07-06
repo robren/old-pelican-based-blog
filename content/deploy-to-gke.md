@@ -242,7 +242,7 @@ In Docker we'd specify the port's to expose to the outside world with parameters
 into the docker run command. In Kubernetes we've got to  explicitly "expose" the releeant ports either internally within a cluster or 
 externally. 
 
-## Instruct Kuberenetes to "deploy" my image
+## Instruct Kubernetes to "deploy" my image
 
 ```shell
 kubectl expose deployment rr-blog --name rr-blog-deploy --port=80 --target-port=80 --type=LoadBalancer
@@ -258,8 +258,8 @@ anycast IP address, but perhaps unwanted for our single  test blog.
 
 In software engineering an often quoted aphorism is "Any problem can be solved
 with an additional level of abstraction". These abstractions play out and are
-neccesary when utilizing the full power of Kuberenetes as an orchestrator for
-containers, e.g using replication controllers, having continers within multiple
+necessary when utilizing the full power of Kubernetes as an orchestrator for
+containers, e.g using replication controllers, having containers within multiple
 domains etc.
 
 The purpose of this experiment was just to get some experience using the gcloud
@@ -286,29 +286,23 @@ curl robren.net
     <title>Rob Rennison's Blog</title>
 Snip
 ```
-## Contemplaion and next steps
+## Contemplation and next steps
 
 Quite a few moving parts! Clearly overkill for a tiny static site, but
 nonetheless a useful exercise in walking through and using gcloud and kubectl.
 
 There's meant to be some good integration with a CI system such as Jenkins
 which will make updates to the blog, on github, automatically deploy a new image to google
-container regsitry, that's clearly an area for more experiment and playing.
+container registry, that's clearly an area for more experiment and playing.
 I've used Jenkins in a test capacity on a python project  and run the unit
 tests upon a new git push, but need to understand how to  utilize Jenkins to
 build a new container and deploy to GCE.
-
 
 From a cost perspective this google container service is overkill for a simple
 static blog, so I think I'll be moving onto a simpler cheaper solution. I've
 heard good things about Vipr.org and will explore them next.
 
-
-
-
-
-Next I think I'll look at deployin 
-
+Update to reflect using the yaml file and how to force restarting of the pods
 
 
 
