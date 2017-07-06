@@ -12,6 +12,11 @@ THEME = '../pelican-themes/pelican-bootstrap3/'
 # required to make some of the themes, including bootstrap3 work
 JINJA_EXTENSIONS = ['jinja2.ext.i18n']
 
+# More "magic" needed to ensure that the fragile themes work
+# without this, som err undefined occurs when making the output
+PLUGINS = ["i18n_subsites"]
+PLUGIN_PATHS = ["../pelican-plugins/"]
+
 PYGMENTS_STYLE = 'solarizedlight'
 BOOTSTRAP_THEME = 'readable'
 PATH = 'content'

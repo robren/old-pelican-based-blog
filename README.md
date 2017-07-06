@@ -19,7 +19,10 @@ The pelican static site generator is well described in the [pelican documentatio
 
 A quick summary of what one would do if starting a new blog from scratch is:
 
-- Install pelican, typically in a virtualenv and done via pip install
+- Install pelican, typically in a virtualenv and done via pip install.
+    - While pelican will run using python 3, the fabric automation scripts
+    only work with python 2.5 to 2.7. Thus ensure that python2.7 is installed
+    in the virtualenv e.g mkvirtualenv robren-blog -p python2.7
 - Run the pelican-quickstart command to create a project framework
 - Tweak the confguration settings in pelicanconf.py and publishconf.py
 - Create content in the content directory, e.g markdown or rst files
@@ -44,7 +47,7 @@ The following steps should be performed preferably in a virtualenv.
 
 - Install pelican 
 ```shell
-    sudo pelican pip install pelican
+    pelican pip install pelican
 ```
 
 - Alternatively
@@ -52,8 +55,12 @@ The following steps should be performed preferably in a virtualenv.
     installation must be pointed at my fork. It's currently under-review as of Dec 2016 
 
 ```shell
-    sudo pip install -U git+https://github.com/robren/pelican@docker-nginx-deploy
+    pip install -U git+https://github.com/robren/pelican@docker-nginx-deploy
 ```
+   - Using this version of pelican is only required if one wants to create a
+     blog from scratch and also get extensions to the fabfile. Installing
+     stock pelican and  cloning my blog repo and editing content in this will 
+     give the latest pelican as well as the extensions in the fabfile.
 
 - Clone the pelican themes repo alongside the  blog directory
   - Or wherever you want, just set the THEME = 'path-to-theme' in pelicanconf.py
@@ -67,6 +74,13 @@ The following steps should be performed preferably in a virtualenv.
     git clone https://github.com/robren/robren-blog
 ```
 
+- Install yet more dependancies
+  - Pelican will give some very cryptic error mesages without these
+```shell
+    pip install fabric
+    pip install Markdown   # My blog is written in markdown
+    pip install typogrify
+```
 - Now you can run the pelican command to generate the blog, or the fab command
   or ... the make commands.
 
@@ -78,9 +92,9 @@ The following steps should be performed preferably in a virtualenv.
     pip install -U pelican
 ```
 
-- The themes updated by performing a git pull in the pelican-themse directory
+- The themes updated by performing a git pull in the pelican-themes directory
 
-- The blog updated by adding new content and "publishing it" using on of the "fabric" commands
+- The blog updated by adding new content and "publishing it" using one of the "fabric" commands
 
 ```shell
 	test-lt :: ~/Blog/robren-blog » fab -l
@@ -100,6 +114,17 @@ The following steps should be performed preferably in a virtualenv.
 		serve                      Serve site at http://localhost:8000/
 ```
 
+- So to create a docker image. from the root of the blog run the folowing
+  command.
+
+```shell
+	test-lt :: ~/Blog/robren-blog » fab docker_rebuild
+```
+Currently this creates an image as well as runs the docker image.
+
+TODO decouple creating the image from running it. This will allow cleaner
+integration with an alternative container workflow, e.g. running within
+Kubernetes.
 
 
 
