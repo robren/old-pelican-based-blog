@@ -1,32 +1,36 @@
-Title: Experimenting with running on GKE
+Title: Experimenting with running the blog on GKE
 Date: 2017-07-05
 Category: Tech-Notes
 Tags: docker, pelican, GKE, containers, google-container, google-compute
 
-# Moving my blog to run using the Google Container Service.
+# Moving my blog to run using Google Container Engine.
 
 I'm doing this purely as an experiment to gain experience with using the 
-Google container service and Google compute services. The steps required are:
+Google container service and Google compute services. The steps required are loosely:
 
 - Establish a google compute account.
 - Install the google SDK and gcloud.
 - Create a default gcloud configuration.
 - Create a  minimum sized cluster to allow us to run Kubernetes and manage our
   blog in a container.
-- Upload a container to the Google container repository
-- Run said container, this contains a static webpage and an nginx server
+- Upload my blog container to the Google Container Registry.
+- Create a "deployment" to run the container.
 - Expose a public IP address for this container.
 - Then update necessary DNS records to point the blog to this container.
 
-# Gcloud
+# Gcloud and kubectl
 
-I'll be doing the majority of this using the google CLI tool gcloud instead of using the Google cloud dashboard GUI.
-Gcloud  being the tool for managing all aspects of google cloud services. It's
+I'll be doing the majority of this using two CLI tools, gcloud and kubectl.
+
+The gcloud CLI tool is used for managing all aspects of google cloud services. It's
 installed locally and uses the Google Cloud Platform APIs. It's also what
-we'll use to install the Kubernetes cli tool kubectl.
+we'll use to install the Kubernetes CLI tool kubectl.
 
-This guide [https://cloud.google.com/sdk/docs/quickstarts] covers the
-installation of the SDK under various OSs. I chose to flow the quickstart for
+The kubectl CLI tool is used for managing Kubernetes. When to use each tool
+should become apparent as we proceed.
+
+This [ SDK quickstart](https://cloud.google.com/sdk/docs/quickstarts) guide covers the
+installation of the SDK under various OSs. I chose to follow the quickstart for
 Linux since I'm running Manjaro.
 
 - gcloud requires python 2.7 so I installed the SDK and run the gcloud CLI
@@ -39,7 +43,7 @@ Linux since I'm running Manjaro.
   getting authenticated and some initialization.
 
 Once I installed the SDK and got access to the gcloud CLI the next step was to 
-create a 'project'. All services, VMs containers are run within the context of a project. 
+create a 'project'. All services, VMs and containers are run within the context of a project. 
 ```shell
 gcloud projects create robren-blog-v1
 gcloud projects list
@@ -54,11 +58,11 @@ specify the project we're using when running the CLI commands.
 gcloud config set project robren-blog-v1
 ```
 
-## Always-free tier
+## Always-free Google Compute Engine tier
 
-Google compute has an "always free" tier. As long as one sticks within
-the usage limits outlined in the description here [
-https://cloud.google.com/free/] the services will be free.
+Google compute has an "always free" tier. As long as I stick within
+the usage limits outlined in the [Always free description]( 
+https://cloud.google.com/free/) the services will be free.
 
 I'll need to monitor my billing to see if this is indeed the case, but it's
 worthwhile  trying to stay in these limits for a tiny experimental blog.
@@ -66,14 +70,12 @@ worthwhile  trying to stay in these limits for a tiny experimental blog.
 One thing specified in the always-free rules is that we can use 1 f1-micro
 instance per month excluding Northern Virginia. So .... I'll want to set my
 default region to be a US region that's not in Northern Virginia. The region names and
-locations are described here [https://cloud.google.com/compute/docs/regions-zones/regions-zones]
-
+locations are described [here] (https://cloud.google.com/compute/docs/regions-zones/regions-zones)
 
 ```shell
 gcloud config set compute/region us-east1
 gcloud config set compute/zone us-east1-c
 ```
-
 By the time I've configured Kubernetes along with controller nodes etc I know
 I'll be in excess of always free limits, but at least I'll get one of the
 nodes for free! If I just wanted to run my blog using an nginx server inside
@@ -83,7 +85,7 @@ no containers, but where would be the fun in that.
 # Create a cluster
 
 The container will run within a cluster, this cluster being controlled by
-Kubernetes. But first to create the cluster we need to use a gcloud command.
+Kubernetes. To create the cluster we need to use a gcloud command.
 Note the machine type being specified  with the -m flag as f1-micro as well as
 the --preemptible flag to keep costs down from the default, but still pretty
 cheap machine.
@@ -92,7 +94,8 @@ cheap machine.
 # Prior to creating the cluster kubectl has to be installed
 gcloud components install kubectl
 
-# To see the available options use the built in help
+# To see the available options use the built in help. In fact all of the gcloud and kubectl
+# have help available on a per sub command basis, this is very usefull.
 gcloud container clusters create --help
 
 # Create our Cluster
@@ -118,7 +121,7 @@ one of the instances will be always-free too!
 
 # Create a container image for my blog
 
-Previous posts describe how I added some custom extensions to the fab file
+Previous posts describe how I added some custom extensions to the fabric file
 included with pelican. The readme in [https://github.com/robren/robren-blog]
 explains how to install pelican, and use the fabfile to create a docker image. 
 Pelican's a bit 'temperamental', my README in github.com/robren/robren-blog has
@@ -127,7 +130,7 @@ site. If you don't want to get embroiled in learning pelican as well as google
 container engine etc, then create some simple content in a subdirectory called
 "output" and proceed as  described below as 'build the image"
 
-If docker is not already installed it should be, here's a quick reminder of
+If docker is not already installed, here's a quick reminder of
 what I needed to do. 
 
 ## Refresher: Installing docker
@@ -154,33 +157,42 @@ docker run hello-world
 
 The pelican distribution provides makefiles, fabfiles and a direct pelican
 command line to create content in a subdirectory called output. The simplest
-way to create the static content would be to directly call
+way to create the static content would be to directly call:
 
 ```shell
 pelican /path/to/your/content/ 
 ```
 ### Create a docker image
-The Docker file used is as simple as:
+The Docker file used is a  simple two liner:
 
 ```shell
 cat ./Dockerfile
 FROM nginx:alpine
 COPY output /usr/share/nginx/html
 ```
-Where the static output from Pelican is contained in the output directory
 
-The docker build command is then used to build the image.
+This specifies that the base linux container image is the nginx image build on
+top of the very lightweight linux container called alpine.`The static output
+from Pelican is contained in the output directory and is copied into the
+defaule place witin the containers file system where nginx expects to serve
+html files from.
+
+The next steps of building and tagging the image can all be compined into one,
+I'm just splitting them out for clarity. In my [robren-blog github
+repo](https://github.com/robren/robren-blog) fabfile.py script I combine these
+operations along with versioning the image into one command available as fab
+kub_rebuild.
 
 ```shell
 docker build -t alpine-blog 
 ```
 
-# Upload the  ontainer image to the Google Container Registry
+# Upload the  container image to the Google Container Registry
 
 The Google documentation is pretty clear and straightforward on how to do this
 [https://cloud.google.com/container-registry/docs/pushing-and-pulling].
 
-Of note are the details of how the docker image must be tagged.
+Of note are the details of how the docker image must be tagged. 
 
 The container image called alpine-blog is the image created by the commands described above, it's 
 a lightweight alpine linux, running nginx to host the static site. This is what I want to deploy
@@ -193,18 +205,27 @@ nginx               alpine              a60696d9123b        5 days ago          
 hello-world         latest              1815c82652c0        2 weeks ago         1.84kB
 ```
 Here's where we tag our image to conform to Google's container repository
-requirements as well as push it to the repository.
+requirements as well as push it to the repository. The container repo
+documentation does not mention the need for versioning ags in the image but as
+I later found out, to upgrade the images and make containers restart with new
+versions, it's best to give an explicit version for, here 0.1.0, for each
+image.
 
 ```shell
-docker tag d3c402637e4e gcr.io/robren-blog-v1/alpine-blog
+docker tag d3c402637e4e gcr.io/robren-blog-v1/alpine-blog:0.1.0
 docker images -a
 REPOSITORY                          TAG                 IMAGE ID            CREATED             SIZE
 alpine-blog                         latest              d3c402637e4e        33 minutes ago      20MB
-gcr.io/robren-blog-v1/alpine-blog   latest              d3c402637e4e        33 minutes ago      20MB
+gcr.io/robren-blog-v1/alpine-blog   0.1.0               d3c402637e4e        33 minutes ago      20MB
 nginx                               alpine              a60696d9123b        5 days ago          15.5MB
 hello-world                         latest              1815c82652c0        2 weeks ago         1.84kB
+```
+Next we need to push the now correctly named image to the google container
+service. Note the use of the gcloud docker command not the docker push command
+that docker users maybe familiar with.
 
-gcloud docker -- push gcr.io/robren-blog-v1/alpine-blog
+```shell
+gcloud docker -- push gcr.io/robren-blog-v1/alpine-blog:0.1.0
 The push refers to a repository [gcr.io/robren-blog-v1/alpine-blog]
 1c99d108e437: Preparing
 3e2835458dad: Preparing
@@ -217,54 +238,134 @@ API from the Cloud console.
 denied: Please enable Google Container Registry API in Cloud Console at https://console.cloud.google.com/apis/api/containerregistry.googleapis.com/overview?project=robren-blog-v1 before performing this operation.
 
 # After enabling the API
-(google-cloud) ➜  robren-blog git:(master) ✗ gcloud docker -- push gcr.io/robren-blog-v1/alpine-blog
+(google-cloud) ➜  robren-blog git:(master) ✗ gcloud docker -- push gcr.io/robren-blog-v1/alpine-blog:0.1.0
 The push refers to a repository [gcr.io/robren-blog-v1/alpine-blog]
 1c99d108e437: Pushed
 3e2835458dad: Pushed
 3da1ee90cad8: Pushed
 2ab3866407e2: Pushed
 040fd7841192: Layer already exists
-latest: digest: sha256:f019e80d59ef82340411ada054987b56b115b6c65f24426f05f34075e6923833 size: 1364
+0.1.0: digest: sha256:f019e80d59ef82340411ada054987b56b115b6c65f24426f05f34075e6923833 size: 1364
+```
+# Instruct Kubernetes to run my image.
+So far everything we've done is easily understandable by anyone with even a
+small amount of experience in docker, we created images with suitable tags and
+uploaded to a google container repo.
+
+Now to run copies of these containers, we've got multiple choices and
+multiple new abstractions to learn. Some of these choices are becomming  obsolete,
+Kubernetes having evolved a lot in the last few years. I'll cut to the chase
+and point out what I interpret as the right way to deploy containers within
+Kuberenetes. The current best practice appears to be to use so called deployments, read on.
+
+## Pods
+- Pods
+    A group of one or more running containers is called a "pod" in Kubernetes
+    parlance. Pods can be created and managed directly but it's **not
+    recommended**
+    
+    The following advice is from the [Kubernetes
+    documentation](https://kubernetes.io/docs/concepts/workloads/pods/pod/)
+
+```
+Pods aren’t intended to be treated as durable entities. They won’t survive
+scheduling failures, node failures, or other evictions, such as due to lack of
+resources, or in the case of node maintenance.
+In general, users shouldn’t need to create pods directly. They should almost
+always use controllers (e.g., Deployments), even for singletons. Controllers
+provide self-healing with a cluster scope, as well as replication and rollout
+management.
 ```
 
-## Instruct Kubernetes to run my image.
+This beg's the question what's a Deployment?
 
-When we run a container in Kubernetes it turns into something that's abstracted as a "deployment"
+## Deployments.
+
+Deployments appear to be the "way to go!" They are an abstraction which
+provide declarative definitions for how to run Pods ( i.e our desired
+containers) and Replica sets (the documentation is particularly unclear here)
+```
+The Kuberenetes documentation states:
+A ReplicaSet ensures that a specified number of pod “replicas” are running at
+any given time.
+```
+Deployments manage updating pods to new versions as well as managing the
+containers within the pods to ensure for example that they are restarted if the node they are
+living on dies.
+
+We can either create the deployment from the command line, as shown below or,
+as a  better practice, specify the parameters for the deployment in a .yaml
+file as shown next.
+
 ```shell
  kubectl run rr-blog --image=gcr.io/robren-blog-v1/alpine-blog --port=80
 
 kubectl get deployments
 NAME      DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 rr-blog   1         1         1            1           9h
-```
-In docker we'd do a docker ps to find the running docker processes. 
-In Docker we'd specify the port's to expose to the outside world with parameters passed 
-into the docker run command. In Kubernetes we've got to  explicitly "expose" the releeant ports either internally within a cluster or 
-externally. 
 
-## Instruct Kubernetes to "deploy" my image
+```
+From now on we'll use the yaml file for specifying how to create the deployment.
+
+The name parameters at the top level defines the name of the deployment. The
+labels parameter containing the label run: rr-blog will come into play later on
+when we define, yet another abstraction, a **service** to run using this
+deployment.
+
+```shell
+cat deploy.yaml
+apiVersion: apps/v1beta1 # for versions before 1.6.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: rr-blog-deploy
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        run: rr-blog
+    spec:
+      containers:
+      - name: alpine-blog
+        image: gcr.io/robren-blog-v1/alpine-blog:0.29.0
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Always
+```
+
+kubectl create -f deploy.yaml
+deployment "rr-blog-deploy" created
+kubectl get deploy
+NAME             DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+rr-blog-deploy   3         3         3            2           4s
+# a few seconds later we go from 2 to 3 available pods
+kubectl get deploy
+NAME             DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+rr-blog-deploy   3         3         3            3           7s
+(robren-blog) ➜  robren-blog git:(master) ✗ kubectl get pods
+NAME                              READY     STATUS    RESTARTS   AGE
+rr-blog-deploy-1503925906-77sc3   1/1       Running   0          11s
+rr-blog-deploy-1503925906-bsprz   1/1       Running   0          11s
+rr-blog-deploy-1503925906-qfmlg   1/1       Running   0          11s
+```
+
+In docker we'd do a docker ps to find the running docker processes, we'd
+specify the port's to expose to the outside world with parameters passed into
+the docker run command. In Kubernetes we've got to  explicitly "expose" the
+releeant ports either internally within a cluster or externally. 
+
+## Expose the webserver to the outside world.
 
 ```shell
 kubectl expose deployment rr-blog --name rr-blog-deploy --port=80 --target-port=80 --type=LoadBalancer
 ```
-
-Now the deployment s referred to using another abstraction  "a service". We
+After running the kubectl expose command we've created created "a service", another abstraction.   We
 can see what external IP has been exposed by using the "get service" command. As
-far as I can see I need to expose the deployment using a LoadBalancer to get an
+far as I can see I need to expose the deployment using a LoadBalancer type of service to get an
 external IP address. The LoadBalancer is an additional cost incurred when
 running a service. A necessary component I'm sure when a real world application
 has many instances of say a web server which can all be reached via a single
-anycast IP address, but perhaps unwanted for our single  test blog.
-
-In software engineering an often quoted aphorism is "Any problem can be solved
-with an additional level of abstraction". These abstractions play out and are
-necessary when utilizing the full power of Kubernetes as an orchestrator for
-containers, e.g using replication controllers, having containers within multiple
-domains etc.
-
-The purpose of this experiment was just to get some experience using the gcloud
-CLI as well as kubectl and get o sense for how this compares to say docker
-machine for a simple container deployment.
+anycast IP address, but perhaps over the top for our single  test blog.
 
 
 ```shell
@@ -274,6 +375,18 @@ NAME             CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
 rr-blog-deploy   10.19.253.94   35.185.16.202   80:31741/TCP   52s
 
 ```
+In software engineering an often quoted aphorism is "Any problem can be solved
+with an additional level of abstraction". These abstractions come into play and are
+necessary in order to utilizing the full power of Kubernetes as an orchestrator for
+containers, e.g using replication controllers, having containers within multiple
+domains etc.
+
+The purpose of this experiment was just to get some experience using the gcloud
+CLI as well as kubectl and get o sense for how this compares to say docker
+machine for a simple container deployment. If we wanted multiple instances of
+our blog using plain docker we'd be using docker swarm so that too would pile
+on the new abstractions and indirections.
+
 
 After updating our DNS records, I use fastmail as my DNS provider,  to point
 robren.net to the External-IP
@@ -291,6 +404,8 @@ Snip
 Quite a few moving parts! Clearly overkill for a tiny static site, but
 nonetheless a useful exercise in walking through and using gcloud and kubectl.
 
+I've not covered here how to perform rolling updates or even 
+
 There's meant to be some good integration with a CI system such as Jenkins
 which will make updates to the blog, on github, automatically deploy a new image to google
 container registry, that's clearly an area for more experiment and playing.
@@ -301,11 +416,6 @@ build a new container and deploy to GCE.
 From a cost perspective this google container service is overkill for a simple
 static blog, so I think I'll be moving onto a simpler cheaper solution. I've
 heard good things about Vipr.org and will explore them next.
-
-Update to reflect using the yaml file and how to force restarting of the pods
-
-
-
 
 
 
