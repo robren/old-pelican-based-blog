@@ -1,5 +1,5 @@
-Title: Experimenting with running the blog on GKE
-Date: 2017-07-05
+Title: Experimenting with running the blog on Google Container Engine.
+Date: 2017-07-07
 Category: Tech-Notes
 Tags: docker, pelican, GKE, containers, google-container, google-compute
 
@@ -307,11 +307,6 @@ rr-blog   1         1         1            1           9h
 ```
 From now on we'll use the yaml file for specifying how to create the deployment.
 
-The name parameters at the top level defines the name of the deployment. The
-labels parameter containing the label run: rr-blog will come into play later on
-when we define, yet another abstraction, a **service** to run using this
-deployment.
-
 ```shell
 cat deploy.yaml
 apiVersion: apps/v1beta1 # for versions before 1.6.0 use extensions/v1beta1
@@ -332,64 +327,68 @@ spec:
         - containerPort: 80
         imagePullPolicy: Always
 ```
+- The name parameters at the top level defines the name of the deployment.
+- The replicas parameter defines how many instances of the containers we want
+  to run
+- The labels parameter containing  the label *run*  and value *rr-blog*  maybe used  as a filter in various _get_ commands.
+- The spec section is similar to a docker compose file, specifying where the
+  container images come from, what internal port to listen on etc.
 
+```shell
 kubectl create -f deploy.yaml
 deployment "rr-blog-deploy" created
 kubectl get deploy
 NAME             DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 rr-blog-deploy   3         3         3            2           4s
-# a few seconds later we go from 2 to 3 available pods
+```
+A few seconds later we go from 2 to 3 available pods
+
+```shell
 kubectl get deploy
 NAME             DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 rr-blog-deploy   3         3         3            3           7s
+```
+We can see the individual containers, within pods, be using the *get* command.
+
+```shell
 (robren-blog) ➜  robren-blog git:(master) ✗ kubectl get pods
 NAME                              READY     STATUS    RESTARTS   AGE
 rr-blog-deploy-1503925906-77sc3   1/1       Running   0          11s
 rr-blog-deploy-1503925906-bsprz   1/1       Running   0          11s
 rr-blog-deploy-1503925906-qfmlg   1/1       Running   0          11s
 ```
-
-In docker we'd do a docker ps to find the running docker processes, we'd
-specify the port's to expose to the outside world with parameters passed into
-the docker run command. In Kubernetes we've got to  explicitly "expose" the
-releeant ports either internally within a cluster or externally. 
-
 ## Expose the webserver to the outside world.
 
-```shell
-kubectl expose deployment rr-blog --name rr-blog-deploy --port=80 --target-port=80 --type=LoadBalancer
-```
-After running the kubectl expose command we've created created "a service", another abstraction.   We
-can see what external IP has been exposed by using the "get service" command. As
-far as I can see I need to expose the deployment using a LoadBalancer type of service to get an
-external IP address. The LoadBalancer is an additional cost incurred when
-running a service. A necessary component I'm sure when a real world application
-has many instances of say a web server which can all be reached via a single
-anycast IP address, but perhaps over the top for our single  test blog.
+In order to communicate with the pods we've got to  explicitly "expose" the
+relevant ports either  to other nodes internally within a cluster or externally. 
+For a webserver we'll want to expose port 80. 
 
+```shell
+kubectl expose deployment robren-blog-deployment --name rr-blog-deploy --port=80 --target-port=80  --type=LoadBalancer
+
+``` 
+After running the kubectl expose command we've created a new object, a
+"service"; another abstraction.   As far as I understand from the documents
+and experiments, I need to expose the deployment using a _LoadBalancer_ type of
+service to get an external IP address. 
+
+We can see what external IP has been exposed by using the "get service" command. 
 
 ```shell
 (google-cloud) ➜  robren-blog git:(master) ✗ kubectl get service
 rr-blog-deploy
 NAME             CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
 rr-blog-deploy   10.19.253.94   35.185.16.202   80:31741/TCP   52s
-
 ```
-In software engineering an often quoted aphorism is "Any problem can be solved
-with an additional level of abstraction". These abstractions come into play and are
-necessary in order to utilizing the full power of Kubernetes as an orchestrator for
-containers, e.g using replication controllers, having containers within multiple
-domains etc.
 
-The purpose of this experiment was just to get some experience using the gcloud
-CLI as well as kubectl and get o sense for how this compares to say docker
-machine for a simple container deployment. If we wanted multiple instances of
-our blog using plain docker we'd be using docker swarm so that too would pile
-on the new abstractions and indirections.
-
+Be aware that, the LoadBalancer is an additional cost incurred when running a service. A necessary component
+when a real world application has many instances of say a web server
+which can all be reached via a single anycast IP address, but perhaps over the
+top for our single  test blog.
 
 After updating our DNS records, I use fastmail as my DNS provider,  to point
-robren.net to the External-IP
+robren.net to the External-IP we can then see the blog via a browser, or curl
+it to prove it's alive!
 
 ```shell
 curl robren.net
@@ -399,23 +398,114 @@ curl robren.net
     <title>Rob Rennison's Blog</title>
 Snip
 ```
+
+## Updating the blog
+
+Assuming you're using versioned images and have both uploaded a new image as
+well as modified the image tag specified within the deploy.yaml file
+```shell
+cat deploy.yaml
+--snip
+spec:
+      containers:
+      - name: alpine-blog
+        image: gcr.io/robren-blog-v1/alpine-blog:0.2.0
+--snip
+```
+
+There are at least two ways of updating the running containers.
+
+### Service interrupting way
+
+There's a way of updating the blog which is destructive, causing a few seconds
+of downtime, handy for development but not recommended for a production  service.
+ 
+```shell
+kubectl replace -f deploy.yaml --force
+```
+
+### Rolling updates
+
+Upload a new image  with tag :0.3.0 then update the desired image, in the
+deploy.yaml file (or in a new yaml file). This time we use the _kubectl apply_ command to perform a
+rolling update whereby individual pods are gradually updated to the new
+version.
+
+```shell
+kubectl apply -f deploy.yaml --record
+
+$ kubectl describe deployments
+Name:                   rr-blog-deploy
+Namespace:              default
+CreationTimestamp:      Sun, 09 Jul 2017 22:37:21 -0400
+Labels:                 run=rr-blog
+Annotations:            deployment.kubernetes.io/revision=2
+                        kubectl.kubernetes.io/last-applied-configuration={"apiVersion":"apps/v1beta1","kind":"Deployment","metadata":{"annotations":{},"name":"rr-blog-deploy","namespace":"default"},"spec":{"replicas":3,"temp...
+                        kubernetes.io/change-cause=kubectl apply --filename=deploy.yaml --record=true
+Selector:               run=rr-blog
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:       run=rr-blog
+  Containers:
+   alpine-blog:
+    Image:              gcr.io/robren-blog-v1/alpine-blog:0.3.0
+    Port:               80/TCP
+    Environment:        <none>
+    Mounts:             <none>
+ 
+---snip
+```
+
 ## Contemplation and next steps
 
-Quite a few moving parts! Clearly overkill for a tiny static site, but
-nonetheless a useful exercise in walking through and using gcloud and kubectl.
+In software engineering an often quoted aphorism is "Any problem can be solved
+with an additional level of abstraction". These abstractions are
+necessary in order to utilize the full power of Kubernetes as an orchestrator for
+containers, e.g using replication controllers, having containers within multiple
+domains etc.
 
-I've not covered here how to perform rolling updates or even 
+Initially they seem a bit confusing and unclear but that's where struggling
+though an example helps to cement the concepts. In retrosepct we can go a long
+way by understanding the follwing objects/ abstractions: 
 
-There's meant to be some good integration with a CI system such as Jenkins
-which will make updates to the blog, on github, automatically deploy a new image to google
-container registry, that's clearly an area for more experiment and playing.
-I've used Jenkins in a test capacity on a python project  and run the unit
-tests upon a new git push, but need to understand how to  utilize Jenkins to
-build a new container and deploy to GCE.
+- Pods
+- Deployments
+- Services.
 
-From a cost perspective this google container service is overkill for a simple
-static blog, so I think I'll be moving onto a simpler cheaper solution. I've
-heard good things about Vipr.org and will explore them next.
+The purpose of this experiment was to get some experience using the gcloud CLI
+as well as kubectl and get o sense for how this compares to say docker machine
+for a simple  remote container deployment. If we wanted multiple instances of
+our blog using plain docker we'd be  end up using docker swarm so that too
+would introduce more abstractions.
+
+Using the Google Container service APIs via gcloud and Kubectl was
+surprisingly easy and intuitive once I'd got a handle on the various
+abstractions. The help is pretty good too. 
+
+There are quite  a few moving parts! Clearly overkill for a tiny static site,
+but the point was to utlize a concrete application, my blog, and see  how to
+deploy it using Kubernetes.
+
+Hopefully this has provided an updated view on   how to deploy a simple app,
+from which readers can then tackle the documentation and other exmaples in
+more depth to deploy more complex multi container applications back end
+database containers etc.
+
+From a cost perspective this google container service is overkill for a 
+low load static blog, (the load balancer being the major cost), but it's designed to
+scale to much larger systems which do require load balancers, multiple domain
+resiliancy etc so this is not a criticism. 
+
+I think I'll  keep the blog on GKE for a month or  just to see what the costs
+are,  I know it will be more than Digital Ocean just for the LoadBalance
+alone. I'll then move it onto be moving onto a simpler cheaper solution. I've
+heard good things about Vipr.org and will explore them next. Of course on the
+next Platform, it would be too simple to merely run nginx on there! I'll be
+looking at either docker-swarm or perhaps installing Kuberentes there too.
+
 
 
 
