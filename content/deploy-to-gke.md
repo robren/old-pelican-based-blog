@@ -1,9 +1,9 @@
 Title: Experimenting with running the blog on Google Container Engine.
-Date: 2017-07-07
+Date: 2017-07-05
+Modified:2017-07-07
 Category: Tech-Notes
 Tags: docker, pelican, GKE, containers, google-container, google-compute
 
-# Moving my blog to run using Google Container Engine.
 
 I'm doing this purely as an experiment to gain experience with using the 
 Google container service and Google compute services. The steps required are loosely:
@@ -18,7 +18,7 @@ Google container service and Google compute services. The steps required are loo
 - Expose a public IP address for this container.
 - Then update necessary DNS records to point the blog to this container.
 
-# Gcloud and kubectl
+## Gcloud and kubectl
 
 I'll be doing the majority of this using two CLI tools, gcloud and kubectl.
 
@@ -44,12 +44,12 @@ Linux since I'm running Manjaro.
 
 Once I installed the SDK and got access to the gcloud CLI the next step was to 
 create a 'project'. All services, VMs and containers are run within the context of a project. 
-```shell
-gcloud projects create robren-blog-v1
-gcloud projects list
-PROJECT_ID       NAME            PROJECT_NUMBER
-robren-blog-v1   robren-blog-v1  840355975236
-```
+
+    :::console
+    gcloud projects create robren-blog-v1
+    gcloud projects list
+    PROJECT_ID       NAME            PROJECT_NUMBER
+    robren-blog-v1   robren-blog-v1  840355975236
 
 Now we update our configuration to use this project by default, to avoid having to
 specify the project we're using when running the CLI commands.
@@ -58,7 +58,7 @@ specify the project we're using when running the CLI commands.
 gcloud config set project robren-blog-v1
 ```
 
-## Always-free Google Compute Engine tier
+### Always-free Google Compute Engine tier
 
 Google compute has an "always free" tier. As long as I stick within
 the usage limits outlined in the [Always free description]( 
@@ -82,7 +82,7 @@ nodes for free! If I just wanted to run my blog using an nginx server inside
 of a compute instance I'd be able to do this with a single micro instance and
 no containers, but where would be the fun in that.
 
-# Create a cluster
+## Create a cluster
 
 The container will run within a cluster, this cluster being controlled by
 Kubernetes. To create the cluster we need to use a gcloud command.
@@ -119,7 +119,7 @@ According to the google cost estimator
 month, so slightly higher than Digital Ocean but I can live with that. Perhaps
 one of the instances will be always-free too!
 
-# Create a container image for my blog
+## Create a container image for my blog
 
 Previous posts describe how I added some custom extensions to the fabric file
 included with pelican. The readme in [https://github.com/robren/robren-blog]
@@ -133,7 +133,7 @@ container engine etc, then create some simple content in a subdirectory called
 If docker is not already installed, here's a quick reminder of
 what I needed to do. 
 
-## Refresher: Installing docker
+### Refresher: Installing docker
 
 Skip if you've already got docker running locally.
 
@@ -151,9 +151,9 @@ newgrp docker # Or log out and back into your system
 docker run hello-world
 ```
 
-## Build the image    
+### Build the image    
 
-### Create your static html content.
+#### Create your static html content.
 
 The pelican distribution provides makefiles, fabfiles and a direct pelican
 command line to create content in a subdirectory called output. The simplest
@@ -162,7 +162,7 @@ way to create the static content would be to directly call:
 ```shell
 pelican /path/to/your/content/ 
 ```
-### Create a docker image
+#### Create a docker image
 The Docker file used is a  simple two liner:
 
 ```shell
@@ -187,7 +187,7 @@ kub_rebuild.
 docker build -t alpine-blog 
 ```
 
-# Upload the  container image to the Google Container Registry
+## Upload the  container image to the Google Container Registry
 
 The Google documentation is pretty clear and straightforward on how to do this
 [https://cloud.google.com/container-registry/docs/pushing-and-pulling].
@@ -247,7 +247,7 @@ The push refers to a repository [gcr.io/robren-blog-v1/alpine-blog]
 040fd7841192: Layer already exists
 0.1.0: digest: sha256:f019e80d59ef82340411ada054987b56b115b6c65f24426f05f34075e6923833 size: 1364
 ```
-# Instruct Kubernetes to run my image.
+## Instruct Kubernetes to run my image.
 So far everything we've done is easily understandable by anyone with even a
 small amount of experience in docker, we created images with suitable tags and
 uploaded to a google container repo.
@@ -258,7 +258,7 @@ Kubernetes having evolved a lot in the last few years. I'll cut to the chase
 and point out what I interpret as the right way to deploy containers within
 Kuberenetes. The current best practice appears to be to use so called deployments, read on.
 
-## Pods
+### Pods
 - Pods
     A group of one or more running containers is called a "pod" in Kubernetes
     parlance. Pods can be created and managed directly but it's **not
@@ -279,7 +279,7 @@ management.
 
 This beg's the question what's a Deployment?
 
-## Deployments.
+### Deployments.
 
 Deployments appear to be the "way to go!" They are an abstraction which
 provide declarative definitions for how to run Pods ( i.e our desired
@@ -357,7 +357,7 @@ rr-blog-deploy-1503925906-77sc3   1/1       Running   0          11s
 rr-blog-deploy-1503925906-bsprz   1/1       Running   0          11s
 rr-blog-deploy-1503925906-qfmlg   1/1       Running   0          11s
 ```
-## Expose the webserver to the outside world.
+### Expose the webserver to the outside world.
 
 In order to communicate with the pods we've got to  explicitly "expose" the
 relevant ports either  to other nodes internally within a cluster or externally. 
@@ -399,7 +399,7 @@ curl robren.net
 Snip
 ```
 
-## Updating the blog
+### Updating the blog
 
 Assuming you're using versioned images and have both uploaded a new image as
 well as modified the image tag specified within the deploy.yaml file
@@ -415,7 +415,7 @@ spec:
 
 There are at least two ways of updating the running containers.
 
-### Service interrupting way
+#### Service interrupting way
 
 There's a way of updating the blog which is destructive, causing a few seconds
 of downtime, handy for development but not recommended for a production  service.
@@ -424,7 +424,7 @@ of downtime, handy for development but not recommended for a production  service
 kubectl replace -f deploy.yaml --force
 ```
 
-### Rolling updates
+#### Rolling updates
 
 Upload a new image  with tag :0.3.0 then update the desired image, in the
 deploy.yaml file (or in a new yaml file). This time we use the _kubectl apply_ command to perform a

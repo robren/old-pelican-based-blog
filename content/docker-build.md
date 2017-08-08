@@ -45,7 +45,7 @@ output html is generated into.
 
 Notice the Dockerfile, the only thing non-traditional about this pelican blog. 
 
-    :::bash
+    :::console
     test-lt :: rob/Dropbox/Blog » tree -L 2 -F
     .
     ├── pelican-themes/
