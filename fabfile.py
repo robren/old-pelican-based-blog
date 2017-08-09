@@ -25,8 +25,9 @@ env.cloudfiles_container = 'my_cloudfiles_container'
 env.github_pages_branch = "gh-pages"
 
 # Docker configuration
-#env.docker_blog_image = 'alpine-blog'
-env.docker_blog_image = 'gcr.io/robren-blog-v1/alpine-blog:' 
+env.docker_blog_image = 'alpine-blog'
+# migrated away from gke. 
+#env.docker_blog_image = 'gcr.io/robren-blog-v1/alpine-blog:' 
 env.docker_target_dir = '/usr/share/nginx/html'
 env.docker_container_name = 'pelican_site_container'
 
@@ -109,20 +110,18 @@ def docker_rebuild():
     clean()
     preview()  # Builds the production version of the site
 
-    if local("docker ps -a | grep %s; exit 0" %
-             env.docker_container_name, capture=True) != "":
-        local("docker rm -f  {docker_container_name}".format(**env))
 
-# Remove the existing blog docker image
-    if local("docker images | grep %s; exit 0" %
-            env.docker_blog_image, capture=True) != "" :
-        local("docker rmi  {docker_blog_image}".format(**env))
+    # Prune stopped containers and dangling old images.
+    local("docker container prune -f ")
+    local("docker image  prune -f ")
+
         
-# Now build the new image
+    # Now build the new image
     local("docker build -t {docker_blog_image} .".format(**env))
 
-# We're going to run remotely
+    # Run the container, exposing port 80
     local("docker run -d -p 80:80 --name {docker_container_name} \
+            --restart always  \
             {docker_blog_image} ".format(**env))
 
 def kube_rebuild():
@@ -135,19 +134,15 @@ def kube_rebuild():
     clean()
     preview()  # Builds the production version of the site
 
-    if local("docker ps -a | grep %s; exit 0" %
-             env.docker_container_name, capture=True) != "":
-        local("docker rm -f  {docker_container_name}".format(**env))
+    # Prune stopped containers and dangling old images.
+    local("docker container prune -f ")
+    local("docker image  prune -f ")
 
-    # Remove the existing blog docker image
-    if local("docker images | grep %s; exit 0" %
-            env.docker_blog_image, capture=True) != "" :
-        local("docker rmi  {docker_blog_image}".format(**env))
-        
     # Now build the new image # incorporating a version within the  image tag. 
     # Kubernetes likes images to # be tagged in this manner to ease upgrades.
     # bumpbersion is a python package which will increment version flags in
-    # files, see .bumversion.cfg
+    # files, see .bumpversion.cfg
+    # There's got to be aneasier way than this!
 
     local("bumpversion minor --allow-dirty")
     config = ConfigParser.ConfigParser()

@@ -157,7 +157,7 @@ default place within the docker image where nginx expects to server html content
 
     :::bash
 	test-lt :: rob/Dropbox/Blog » more robren-blog/Dockerfile
-	FROM nginx
+	FROM nginx:alpine
 	COPY output /usr/share/nginx/html
 	
 ## Build the image
@@ -221,6 +221,7 @@ Now that we have our "bespoke" image we can run it using the ... *docker run* co
 
 - The -d flag specifies that we run the container in the background (as a daemon) 
 - The -p 80:80 tells docker to expose port 80 inside the container as port 80 on our host.
+
 
 	:::bash
 	test-lt :: ~/Blog/robren-blog » docker run --name robsblog -d -p 80:80 robsblogimage

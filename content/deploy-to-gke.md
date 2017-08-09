@@ -502,7 +502,7 @@ resiliancy etc so this is not a criticism.
 I think I'll  keep the blog on GKE for a month or  just to see what the costs
 are,  I know it will be more than Digital Ocean just for the LoadBalance
 alone. I'll then move it onto be moving onto a simpler cheaper solution. I've
-heard good things about Vipr.org and will explore them next. Of course on the
+heard good things about Vultr.com and will explore them next. Of course on the
 next Platform, it would be too simple to merely run nginx on there! I'll be
 looking at either docker-swarm or perhaps installing Kuberentes there too.
 
