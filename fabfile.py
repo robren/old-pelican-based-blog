@@ -116,6 +116,13 @@ def docker_rebuild():
     local("docker image  prune -f ")
 
         
+    # Forcibly remove the existing running containers
+    # I need the ps -a stuff since if there's no container running the docker
+    # rm returns an error.
+    if local("docker ps -a | grep %s; exit 0" % env.docker_container_name, capture=True) != "":
+        local("docker rm -f  {docker_container_name}".format(**env))
+
+
     # Now build the new image
     local("docker build -t {docker_blog_image} .".format(**env))
 
@@ -153,5 +160,6 @@ def kube_rebuild():
     docker_image_name = "{docker_blog_image}".format(**env) + image_version 
 
     local("docker build -t {} .".format(docker_image_name))
+
     local('gcloud docker -- push {}'.format(docker_image_name))
 

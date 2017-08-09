@@ -121,12 +121,13 @@ one of the instances will be always-free too!
 
 ## Create a container image for my blog
 
-Previous posts describe how I added some custom extensions to the fabric file
-included with pelican. The readme in [https://github.com/robren/robren-blog]
-explains how to install pelican, and use the fabfile to create a docker image. 
-Pelican's a bit 'temperamental', my README in github.com/robren/robren-blog has
-a few pointers to what I needed to do to get pelican to generate a static
-site. If you don't want to get embroiled in learning pelican as well as google
+Previous posts [Deploying using docker machine]({filename}/docker-deploy.md)
+describe how I added some custom extensions to the fabric file included with
+pelican. The readme in [https://github.com/robren/robren-blog] explains how to
+install pelican, and use the fabfile to create a docker image.  Pelican's a
+bit 'temperamental', my README in github.com/robren/robren-blog has a few
+pointers to what I needed to do to get pelican to generate a static site. If
+you don't want to get embroiled in learning pelican as well as google
 container engine etc, then create some simple content in a subdirectory called
 "output" and proceed as  described below as 'build the image"
 
