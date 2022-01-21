@@ -17,7 +17,7 @@ Fabric==1.13.2
 feedgenerator==1.9
 idna==2.5
 ipaddress==1.0.18
-ipython==5.4.1
+ipython==7.16.3
 ipython-genutils==0.2.0
 Jinja2==2.9.6
 Markdown==2.6.8
